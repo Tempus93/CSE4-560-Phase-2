@@ -19,8 +19,8 @@ CREATE TABLE temp_nflverse_teams (
 );
 
 COPY temp_nflverse_teams
-FROM 'Data(CSVs)/teams_colors_logos.csv' 
+FROM 'Data(CSVs)/teams_colors_logos.csv' --CSV need to be in a PUBLIC directory or use absolute path
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
--- Verify the data was loaded correctly
+-- 3. Verification (Optional but recommended for the team)
 SELECT 'Staging load complete. Total rows:' as status, COUNT(*) FROM temp_nflverse_teams;
