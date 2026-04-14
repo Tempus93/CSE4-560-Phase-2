@@ -1,0 +1,140 @@
+-- 1. Conference (Top of hierarchy)
+CREATE TABLE Conference (
+    ConferenceID SERIAL PRIMARY KEY,
+    ConfName VARCHAR(50) NOT NULL
+);
+
+-- 2. Division (References Conference)
+CREATE TABLE Division (
+    DivisionID SERIAL PRIMARY KEY,
+    DivName VARCHAR(50) NOT NULL,
+    ConferenceID INTEGER NOT NULL,
+    FOREIGN KEY (ConferenceID) REFERENCES Conference(ConferenceID) ON DELETE CASCADE
+);
+
+-- 3. Teams (References Division)
+CREATE TABLE Teams (
+    TeamID SERIAL PRIMARY KEY,
+    TeamName VARCHAR(100) NOT NULL,
+    City VARCHAR(100) NOT NULL,
+    DivisionID INTEGER NOT NULL,
+    HeadCoach VARCHAR(100),
+    FOREIGN KEY (DivisionID) REFERENCES Division(DivisionID) ON DELETE SET NULL
+);
+
+-- 4. Player (References Teams)
+CREATE TABLE Player (
+    PlayerID SERIAL PRIMARY KEY,
+    FirstName VARCHAR(50) NOT NULL,
+    LastName VARCHAR(50) NOT NULL,
+    Position VARCHAR(10) NOT NULL,
+    DraftYear INTEGER,
+    College VARCHAR(100),
+    TeamID INTEGER,
+    FOREIGN KEY (TeamID) REFERENCES Teams(TeamID) ON DELETE SET NULL
+);
+
+-- 5. Seasons
+CREATE TABLE Seasons (
+    SeasonID SERIAL PRIMARY KEY,
+    StartDate DATE NOT NULL,
+    EndDate DATE NOT NULL,
+    IsActive BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+-- 6. Games (References Seasons and Teams)
+CREATE TABLE Games (
+    GameID SERIAL PRIMARY KEY,
+    SeasonID INTEGER NOT NULL,
+    HomeTeamID INTEGER NOT NULL,
+    AwayTeamID INTEGER NOT NULL,
+    HomeScore INTEGER,
+    AwayScore INTEGER,
+    StadiumName VARCHAR(100) NOT NULL,
+    FOREIGN KEY (SeasonID) REFERENCES Seasons(SeasonID) ON DELETE CASCADE,
+    FOREIGN KEY (HomeTeamID) REFERENCES Teams(TeamID) ON DELETE RESTRICT,
+    FOREIGN KEY (AwayTeamID) REFERENCES Teams(TeamID) ON DELETE RESTRICT
+);
+
+-- 7. SnapCounts (References Player and Games)
+CREATE TABLE SnapCounts (
+    SnapID SERIAL PRIMARY KEY,
+    PlayerID INTEGER NOT NULL,
+    GameID INTEGER NOT NULL,
+    OffensiveSnaps INTEGER DEFAULT 0 NOT NULL,
+    DefensiveSnaps INTEGER DEFAULT 0 NOT NULL,
+    STSnaps INTEGER DEFAULT 0 NOT NULL,
+    SnapPercentage DECIMAL(5,2),
+    FOREIGN KEY (PlayerID) REFERENCES Player(PlayerID) ON DELETE CASCADE,
+    FOREIGN KEY (GameID) REFERENCES Games(GameID) ON DELETE CASCADE
+);
+
+-- 8. OffensiveStats
+CREATE TABLE OffensiveStats (
+    OffStatID SERIAL PRIMARY KEY,
+    OffensiveSnaps INTEGER NOT NULL, -- References SnapCounts(SnapID) later via Alter or in PlayerStats
+    PassingYds INTEGER DEFAULT 0 NOT NULL,
+    PassingTDs INTEGER DEFAULT 0 NOT NULL,
+    Completions INTEGER DEFAULT 0 NOT NULL,
+    Attempts INTEGER DEFAULT 0 NOT NULL,
+    RushingYds INTEGER DEFAULT 0 NOT NULL,
+    RushingTDs INTEGER DEFAULT 0 NOT NULL,
+    ReceivingYds INTEGER DEFAULT 0 NOT NULL,
+    ReceivingTDs INTEGER DEFAULT 0 NOT NULL,
+    TwoPtConversions INTEGER DEFAULT 0 NOT NULL
+);
+
+-- 9. DefensiveStats
+CREATE TABLE DefensiveStats (
+    DefStatID SERIAL PRIMARY KEY,
+    DefensiveSnaps INTEGER NOT NULL,
+    Tackles INTEGER DEFAULT 0 NOT NULL,
+    Sacks DECIMAL(4,1) DEFAULT 0 NOT NULL,
+    TacklesForLoss DECIMAL(4,1) DEFAULT 0 NOT NULL,
+    Interceptions INTEGER DEFAULT 0 NOT NULL,
+    PassDeflections INTEGER DEFAULT 0 NOT NULL,
+    ForcedFumbles INTEGER DEFAULT 0 NOT NULL,
+    DefensiveTDs INTEGER DEFAULT 0 NOT NULL,
+    Pressures INTEGER DEFAULT 0 NOT NULL
+);
+
+-- 10. SpecialTeamStats
+CREATE TABLE SpecialTeamStats (
+    STStatID SERIAL PRIMARY KEY,
+    STSnaps INTEGER NOT NULL,
+    FGAttempts INTEGER DEFAULT 0 NOT NULL,
+    FGMade INTEGER DEFAULT 0 NOT NULL,
+    FGLong INTEGER DEFAULT 0 NOT NULL,
+    XPAttempts INTEGER DEFAULT 0 NOT NULL,
+    XPMade INTEGER DEFAULT 0 NOT NULL,
+    PuntYds INTEGER DEFAULT 0 NOT NULL,
+    ReturnYds INTEGER DEFAULT 0 NOT NULL,
+    ReturnTDs INTEGER DEFAULT 0 NOT NULL
+);
+
+-- 11. PlayerStats (Bridge table linking Player, Game, and Specific Stats)
+CREATE TABLE PlayerStats (
+    StatID SERIAL PRIMARY KEY,
+    PlayerID INTEGER NOT NULL,
+    GameID INTEGER NOT NULL,
+    OffStatID INTEGER,
+    DefStatID INTEGER,
+    STStatID INTEGER,
+    FOREIGN KEY (PlayerID) REFERENCES Player(PlayerID) ON DELETE CASCADE,
+    FOREIGN KEY (GameID) REFERENCES Games(GameID) ON DELETE CASCADE,
+    FOREIGN KEY (OffStatID) REFERENCES OffensiveStats(OffStatID) ON DELETE SET NULL,
+    FOREIGN KEY (DefStatID) REFERENCES DefensiveStats(DefStatID) ON DELETE SET NULL,
+    FOREIGN KEY (STStatID) REFERENCES SpecialTeamStats(STStatID) ON DELETE SET NULL
+);
+
+-- 12. Weather
+CREATE TABLE Weather (
+    WeatherID SERIAL PRIMARY KEY,
+    GameID INTEGER NOT NULL,
+    Temperature DECIMAL(5,2),
+    Condition VARCHAR(50),
+    WindSpeed DECIMAL(5,2),
+    Humidity DECIMAL(5,2),
+    TimeObserved TIMESTAMP NOT NULL,
+    FOREIGN KEY (GameID) REFERENCES Games(GameID) ON DELETE CASCADE
+);
