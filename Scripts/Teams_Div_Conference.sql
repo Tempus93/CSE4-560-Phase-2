@@ -16,9 +16,10 @@ ON CONFLICT DO NOTHING;
 
 -- 3. Populate Final Teams Table
 -- This maps the string names to the integer IDs you need for Phase 2
-INSERT INTO Teams (TeamName, City, DivisionID)
+INSERT INTO Teams (TeamName, TeamAbbr, City, DivisionID)
 SELECT 
     t.team_name,
+    t.team_abbr,
     -- REGEXP_REPLACE logic: 
     -- '(\s\S+)$' matches the last space and the following word (the nickname)
     -- and replaces it with an empty string, leaving only the city.
