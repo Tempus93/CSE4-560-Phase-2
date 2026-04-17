@@ -34,3 +34,8 @@ This phase focuses on the technical execution of the database, involving over **
 - [ ] **Advanced Queries**: Implementation of 10+ complex SQL queries (Joins, Subqueries, Stored Procedures).
 - [ ] **Transactions**: Failure handling using Triggers.
 - [ ] **Performance Tuning**: Indexing strategies and `EXPLAIN` cost analysis.
+
+### Data We Are Using
+**Main Player/Game Stats** : [NFLVerse Releases](https://github.com/nflverse/nflverse-data/releases).
+
+**NFL Game Weather**: [TBA]
