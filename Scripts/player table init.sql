@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS temp_nflverse_players (
 -- 2. Bulk Load 
 -- Move csv to public folder b4 copy
 COPY temp_nflverse_players
-FROM 'C:/Users/Public/Documents/players.csv' -- Adjust path as needed; has to be in public folder for COPY to work
+FROM 'C:/Temp/players.csv' -- Adjust path as needed; has to be in public folder for COPY to work
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 -- size of college name is variable, so we need to adjust the Player table schema before migrating
@@ -39,8 +39,8 @@ FROM temp_nflverse_players tp
 LEFT JOIN (
     -- This subquery is necessary to get the TeamID based on the latest_team abbreviation from the CSV
     -- THIS SCRIPT ASSUMES your Teams table has an 'abbreviation' column 
-    SELECT TeamID, abbreviation FROM Teams
-) t ON (tp.latest_team IS NOT NULL AND t.abbreviation ILIKE tp.latest_team || '%')
+    SELECT TeamID, teamabbr FROM Teams
+) t ON (tp.latest_team IS NOT NULL AND t.teamabbr ILIKE tp.latest_team || '%')
 WHERE tp.last_season >= 2024 -- Focuses on recent/active players to hit your 3,000 record goal
 ON CONFLICT DO NOTHING;
 
