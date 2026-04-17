@@ -44,13 +44,14 @@ CREATE TABLE Seasons (
 );
 
 COPY Seasons(StartDate, EndDate, IsActive)
-FROM 'Data(CSVs)/season_dates_1980-2026.csv'
+FROM 'C:/Temp/season_dates_1980-2026.csv'
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 -- 6. Games (References Seasons and Teams)
 CREATE TABLE Games (
     GameID SERIAL PRIMARY KEY,
     SeasonID INTEGER NOT NULL,
+    Week INTEGER NOT NULL,
     HomeTeamID INTEGER NOT NULL,
     AwayTeamID INTEGER NOT NULL,
     HomeScore INTEGER,

@@ -48,11 +48,12 @@ CREATE TABLE IF NOT EXISTS Games_Staging (
 );
 
 COPY Games_Staging
-FROM 'C:/Users/Public/Documents/games.csv' -- Adjust path as needed; has to be in public folder for COPY to work
+FROM 'C:/Temp/GameStats/games.csv' -- Adjust path as needed; has to be in public folder for COPY to work
 WITH (FORMAT CSV, HEADER TRUE);
 
 INSERT INTO games (
     SeasonID,
+    Week,
     HomeTeamID,
     AwayTeamID,
     HomeScore,
@@ -61,6 +62,7 @@ INSERT INTO games (
 )
 SELECT
     s.SeasonID,
+    gs.Week AS Week,
     ht.TeamID AS HomeTeamID,
     at.TeamID AS AwayTeamID,
     gs.home_score,
