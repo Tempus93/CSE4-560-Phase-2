@@ -1,4 +1,4 @@
-CREATE TABLE Games_Staging (
+CREATE TABLE IF NOT EXISTS Games_Staging (
     game_id TEXT,
     season INTEGER,
     game_type TEXT,
@@ -48,10 +48,10 @@ CREATE TABLE Games_Staging (
 );
 
 COPY Games_Staging
-FROM 'Data(CSVs)/GameStats/games.csv'
+FROM 'C:/Users/Public/Documents/games.csv' -- Adjust path as needed; has to be in public folder for COPY to work
 WITH (FORMAT CSV, HEADER TRUE);
 
-INSERT INTO Games (
+INSERT INTO games (
     SeasonID,
     HomeTeamID,
     AwayTeamID,
