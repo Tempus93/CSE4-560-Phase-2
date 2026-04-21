@@ -48,9 +48,10 @@ CREATE TABLE IF NOT EXISTS Games_Staging (
 );
 
 COPY Games_Staging
-FROM 'C:/Temp/GameStats/games.csv' -- Adjust path as needed; has to be in public folder for COPY to work
+FROM 'C:/Users/Public/Documents/games.csv' -- Adjust path as needed; has to be in public folder for COPY to work
 WITH (FORMAT CSV, HEADER TRUE);
 
+ALTER TABLE Games ADD COLUMN IF NOT EXISTS Week INTEGER; --gotta add this so we can pin playerstats to a specific week of the season, which is important for calculating rest days and other time-sensitive stats 
 INSERT INTO games (
     SeasonID,
     Week,
@@ -72,6 +73,6 @@ FROM Games_Staging gs
 JOIN Seasons s
     ON EXTRACT(YEAR FROM s.StartDate) = gs.season
 JOIN Teams ht
-    ON ht.teamabbr = gs.home_team
+    ON ht.abbreviation = gs.home_team
 JOIN Teams at
-    ON at.teamabbr = gs.away_team;
+    ON at.abbreviation = gs.away_team;
