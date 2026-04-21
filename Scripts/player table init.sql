@@ -23,7 +23,7 @@ WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 -- size of college name is variable, so we need to adjust the Player table schema before migrating
 ALTER TABLE Player ALTER COLUMN College TYPE VARCHAR(255);
-
+ALTER TABLE Player ADD CONSTRAINT unique_player_identity UNIQUE (FirstName, LastName, TeamID);
 -- 3. Migrate to Final Player Table with Relational Join
 INSERT INTO Player (FirstName, LastName, Position, DraftYear, College, TeamID)
 SELECT 
