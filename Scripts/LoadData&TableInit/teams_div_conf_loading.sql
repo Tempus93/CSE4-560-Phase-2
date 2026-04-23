@@ -1,7 +1,7 @@
 -- 1. Populate Conference Table
 -- NFLverse uses 'AFC' and 'NFC' strings
 -- transform nflverse teams data to match the structure of the teams table in the database
-CREATE TABLE temp_nflverse_teams (
+CREATE TABLE IF NOT EXISTS temp_nflverse_teams (
     team_abbr VARCHAR(10),
     team_name VARCHAR(100),
     team_id INTEGER,
@@ -66,4 +66,4 @@ SELECT 'Divisions:', COUNT(*) FROM Division
 UNION ALL
 SELECT 'Teams:', COUNT(*) FROM Teams;
 
-DROP TABLE temp_nflverse_teams;
+DROP TABLE IF EXISTS temp_nflverse_teams;

@@ -30,9 +30,9 @@ This phase focuses on the technical execution of the database, involving over **
 
 ### Key Tasks
 - [ ] **Data Loading**: Bulk import of production datasets using `load.sql`.
-- [ ] **Normalization**: Verification of all relations to meet **Boyce-Codd Normal Form (BCNF)**.
-- [ ] **Advanced Queries**: Implementation of 10+ complex SQL queries (Joins, Subqueries, Stored Procedures).
-- [ ] **Transactions**: Failure handling using Triggers.
+- [X] **Normalization**: Verification of all relations to meet **Boyce-Codd Normal Form (BCNF)**.
+- [X] **Advanced Queries**: Implementation of 10+ complex SQL queries (Joins, Subqueries, Stored Procedures).
+- [X] **Transactions**: Failure handling using Triggers.
 - [ ] **Performance Tuning**: Indexing strategies and `EXPLAIN` cost analysis.
 
 ### Data We Are Using
