@@ -91,3 +91,4 @@ JOIN Player p
    =
      LOWER(REGEXP_REPLACE(TRIM(s.player), '[^a-z ]', '', 'g'))
 
+DROP TABLE IF EXISTS SnapCounts_Staging;

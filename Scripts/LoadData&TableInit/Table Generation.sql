@@ -1,11 +1,11 @@
 -- 1. Conference (Top of hierarchy)
-CREATE TABLE Conference (
+CREATE TABLE IF NOT EXISTS Conference (
     ConferenceID SERIAL PRIMARY KEY,
     ConfName VARCHAR(50) NOT NULL
 );
 
 -- 2. Division (References Conference)
-CREATE TABLE Division (
+CREATE TABLE IF NOT EXISTS Division (
     DivisionID SERIAL PRIMARY KEY,
     DivName VARCHAR(50) NOT NULL,
     ConferenceID INTEGER NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE Division (
 );
 
 -- 3. Teams (References Division)
-CREATE TABLE Teams (
+CREATE TABLE IF NOT EXISTS Teams (
     TeamID SERIAL PRIMARY KEY,
     TeamName VARCHAR(100) NOT NULL,
     TeamAbbr VARCHAR(10) NOT NULL,
@@ -24,7 +24,7 @@ CREATE TABLE Teams (
 );
 
 -- 4. Player (References Teams)
-CREATE TABLE Player (
+CREATE TABLE IF NOT EXISTS Player (
     PlayerID SERIAL PRIMARY KEY,
     FirstName VARCHAR(50) NOT NULL,
     LastName VARCHAR(50) NOT NULL,
@@ -36,7 +36,7 @@ CREATE TABLE Player (
 );
 
 -- 5. Seasons
-CREATE TABLE Seasons (
+CREATE TABLE IF NOT EXISTS Seasons (
     SeasonID SERIAL PRIMARY KEY,
     StartDate DATE NOT NULL,
     EndDate DATE NOT NULL,
@@ -48,7 +48,7 @@ FROM 'C:/Temp/season_dates_1980-2026.csv'
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 -- 6. Games (References Seasons and Teams)
-CREATE TABLE Games (
+CREATE TABLE IF NOT EXISTS Games (
     GameID SERIAL PRIMARY KEY,
     SeasonID INTEGER NOT NULL,
     Week INTEGER NOT NULL,
@@ -63,7 +63,7 @@ CREATE TABLE Games (
 );
 
 -- 7. SnapCounts (References Player and Games)
-CREATE TABLE SnapCounts (
+CREATE TABLE IF NOT EXISTS SnapCounts (
     SnapID SERIAL PRIMARY KEY,
     PlayerID INTEGER NOT NULL,
     GameID INTEGER NOT NULL,
@@ -76,7 +76,7 @@ CREATE TABLE SnapCounts (
 );
 
 -- 8. OffensiveStats
-CREATE TABLE OffensiveStats (
+CREATE TABLE IF NOT EXISTS OffensiveStats (
     OffStatID SERIAL PRIMARY KEY,
     OffensiveSnaps INTEGER NOT NULL, -- References SnapCounts(SnapID) later via Alter or in PlayerStats
     PassingYds INTEGER DEFAULT 0 NOT NULL,
@@ -91,7 +91,7 @@ CREATE TABLE OffensiveStats (
 );
 
 -- 9. DefensiveStats
-CREATE TABLE DefensiveStats (
+CREATE TABLE IF NOT EXISTS DefensiveStats (
     DefStatID SERIAL PRIMARY KEY,
     DefensiveSnaps INTEGER NOT NULL,
     Tackles INTEGER DEFAULT 0 NOT NULL,
@@ -105,7 +105,7 @@ CREATE TABLE DefensiveStats (
 );
 
 -- 10. SpecialTeamStats
-CREATE TABLE SpecialTeamStats (
+CREATE TABLE IF NOT EXISTS SpecialTeamStats (
     STStatID SERIAL PRIMARY KEY,
     STSnaps INTEGER NOT NULL,
     FGAttempts INTEGER DEFAULT 0 NOT NULL,
@@ -119,7 +119,7 @@ CREATE TABLE SpecialTeamStats (
 );
 
 -- 11. PlayerStats (Bridge table linking Player, Game, and Specific Stats)
-CREATE TABLE PlayerStats (
+CREATE TABLE IF NOT EXISTS PlayerStats (
     StatID SERIAL PRIMARY KEY,
     PlayerID INTEGER NOT NULL,
     GameID INTEGER NOT NULL,
@@ -134,7 +134,7 @@ CREATE TABLE PlayerStats (
 );
 
 -- 12. Weather
-CREATE TABLE Weather (
+CREATE TABLE IF NOT EXISTS Weather (
     WeatherID SERIAL PRIMARY KEY,
     GameID INTEGER NOT NULL,
     Temperature DECIMAL(5,2),

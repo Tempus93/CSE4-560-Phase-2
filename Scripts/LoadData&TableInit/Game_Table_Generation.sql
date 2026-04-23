@@ -73,6 +73,8 @@ FROM Games_Staging gs
 JOIN Seasons s
     ON EXTRACT(YEAR FROM s.StartDate) = gs.season
 JOIN Teams ht
-    ON ht.abbreviation = gs.home_team
+    ON ht.teamabbr = gs.home_team
 JOIN Teams at
-    ON at.abbreviation = gs.away_team;
+    ON at.teamabbr = gs.away_team;
+
+DROP TABLE IF EXISTS Games_Staging;

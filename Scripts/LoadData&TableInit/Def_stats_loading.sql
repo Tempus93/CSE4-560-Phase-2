@@ -18,7 +18,7 @@ JOIN Games g ON g.Week = t.week
 JOIN Teams t_home ON g.HomeTeamID = t_home.TeamID
 JOIN Teams t_away ON g.AwayTeamID = t_away.TeamID
 JOIN Seasons s ON g.SeasonID = s.SeasonID
-WHERE (t.team = t_home.abbreviation OR t.team = t_away.abbreviation)
+WHERE (t.team = t_home.teamabbr OR t.team = t_away.teamabbr)
   AND EXTRACT(YEAR FROM s.StartDate) = t.season
 -- THE FIX: Grouping by the actual IDs that have the constraint
 GROUP BY p.PlayerID, g.GameID;
@@ -54,3 +54,8 @@ JOIN numbered_inserted ni ON tdr.grouped_id = ni.grouped_id
 -- If the row exists (Offense), update it. If not, create it (Defense only).
 ON CONFLICT (PlayerID, GameID) 
 DO UPDATE SET DefStatID = EXCLUDED.DefStatID;
+
+-- 5. Final Cleanup
+DROP TABLE IF EXISTS temp_def_resolved;
+-- Note: temp_def_stats_staging should also be dropped if you are finished with it
+DROP TABLE IF EXISTS temp_def_stats_staging;

@@ -47,4 +47,4 @@ ON CONFLICT DO NOTHING;
 -- 4. Verification and Cleanup
 SELECT 'Players Loaded:' as status, COUNT(*) FROM Player;
 
--- DROP TABLE temp_nflverse_players; -- Uncomment after confirming counts
+DROP TABLE IF EXISTS temp_nflverse_players; -- Uncomment after confirming counts
