@@ -46,4 +46,6 @@ JOIN Teams ht ON g.HomeTeamID = ht.TeamID
 JOIN Teams at ON g.AwayTeamID = at.TeamID
 WHERE (t.recent_team = ht.abbreviation OR t.recent_team = at.abbreviation)
   AND (SELECT EXTRACT(YEAR FROM StartDate) FROM Seasons WHERE SeasonID = g.SeasonID) = t.season
-ON CONFLICT DO NOTHING;
+  
+ON CONFLICT (PlayerID, GameID) 
+DO UPDATE SET OffStatID = EXCLUDED.OffStatID;
