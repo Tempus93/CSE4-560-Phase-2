@@ -32,7 +32,8 @@ CREATE TABLE IF NOT EXISTS Player (
     DraftYear INTEGER,
     College VARCHAR(100),
     TeamID INTEGER,
-    FOREIGN KEY (TeamID) REFERENCES Teams(TeamID) ON DELETE SET NULL
+    FOREIGN KEY (TeamID) REFERENCES Teams(TeamID) ON DELETE SET NULL,
+    CONSTRAINT unique_player_identity UNIQUE (FirstName, LastName, TeamID)
 );
 
 -- 5. Seasons
@@ -44,7 +45,7 @@ CREATE TABLE IF NOT EXISTS Seasons (
 );
 
 COPY Seasons(StartDate, EndDate, IsActive)
-FROM 'C:/Temp/season_dates_1980-2026.csv'
+FROM 'C:/Users/Public/Documents/season_dates_1980-2026.csv'
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 -- 6. Games (References Seasons and Teams)
@@ -72,7 +73,8 @@ CREATE TABLE IF NOT EXISTS SnapCounts (
     STSnaps INTEGER DEFAULT 0 NOT NULL,
     SnapPercentage DECIMAL(5,2),
     FOREIGN KEY (PlayerID) REFERENCES Player(PlayerID) ON DELETE CASCADE,
-    FOREIGN KEY (GameID) REFERENCES Games(GameID) ON DELETE CASCADE
+    FOREIGN KEY (GameID) REFERENCES Games(GameID) ON DELETE CASCADE,
+    UNIQUE (PlayerID, GameID) -- Ensures one snap count record per player per game
 );
 
 -- 8. OffensiveStats
@@ -130,7 +132,8 @@ CREATE TABLE IF NOT EXISTS PlayerStats (
     FOREIGN KEY (GameID) REFERENCES Games(GameID) ON DELETE CASCADE,
     FOREIGN KEY (OffStatID) REFERENCES OffensiveStats(OffStatID) ON DELETE SET NULL,
     FOREIGN KEY (DefStatID) REFERENCES DefensiveStats(DefStatID) ON DELETE SET NULL,
-    FOREIGN KEY (STStatID) REFERENCES SpecialTeamStats(STStatID) ON DELETE SET NULL
+    FOREIGN KEY (STStatID) REFERENCES SpecialTeamStats(STStatID) ON DELETE SET NULL,
+    UNIQUE (PlayerID, GameID) -- Ensures one stats record per player per game
 );
 
 -- 12. Weather
@@ -166,7 +169,7 @@ CREATE TABLE IF NOT EXISTS temp_nflverse_teams (
 );
 
 COPY temp_nflverse_teams
-FROM 'Data(CSVs)/teams_colors_logos.csv' --CSV need to be in a PUBLIC directory or use absolute path
+FROM 'C:/Users/Public/Documents/teams_colors_logos.csv' --CSV need to be in a PUBLIC directory or use absolute path
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 ------ INSERT LOGIC DOWN HERE------------------
@@ -204,18 +207,16 @@ ON CONFLICT DO NOTHING;
 -- Uncomment the line below once you verify the data is correct
 -- DROP TABLE temp_nflverse_teams;
 
--- 5. Verification for the team
-SELECT 'Conferences:' as table, COUNT(*) FROM Conference
-UNION ALL
-SELECT 'Divisions:', COUNT(*) FROM Division
-UNION ALL
-SELECT 'Teams:', COUNT(*) FROM Teams;
 
-DROP TABLE IF EXISTS temp_nflverse_teams;COPY Seasons(StartDate, EndDate, IsActive)
+DROP TABLE IF EXISTS temp_nflverse_teams;
+
+COPY Seasons(StartDate, EndDate, IsActive)
 FROM 'C:/Users/Public/Documents/season_dates_1980-2026.csv'
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
-SELECT 'Seasons:' as status, COUNT(*) FROM Seasons;CREATE TABLE IF NOT EXISTS Games_Staging (
+SELECT 'Seasons:' as status, COUNT(*) FROM Seasons;
+
+CREATE TABLE IF NOT EXISTS Games_Staging (
     game_id TEXT,
     season INTEGER,
     game_type TEXT,
@@ -294,7 +295,9 @@ JOIN Teams ht
 JOIN Teams at
     ON at.teamabbr = gs.away_team;
 
-DROP TABLE IF EXISTS Games_Staging;-- 1. Create Player Staging Table
+DROP TABLE IF EXISTS Games_Staging;
+
+-- 1. Create Player Staging Table
 CREATE TABLE IF NOT EXISTS temp_nflverse_players (
     gsis_id TEXT, display_name TEXT, common_first_name TEXT, 
     first_name TEXT, last_name TEXT, short_name TEXT, 
@@ -314,12 +317,12 @@ CREATE TABLE IF NOT EXISTS temp_nflverse_players (
 -- 2. Bulk Load 
 -- Move csv to public folder b4 copy
 COPY temp_nflverse_players
-FROM 'C:/Temp/players.csv' -- Adjust path as needed; has to be in public folder for COPY to work
+FROM 'C:/Users/Public/Documents/players.csv' -- Adjust path as needed; has to be in public folder for COPY to work
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 -- size of college name is variable, so we need to adjust the Player table schema before migrating
 ALTER TABLE Player ALTER COLUMN College TYPE VARCHAR(255);
-ALTER TABLE Player ADD CONSTRAINT unique_player_identity UNIQUE (FirstName, LastName, TeamID);
+
 -- 3. Migrate to Final Player Table with Relational Join
 INSERT INTO Player (FirstName, LastName, Position, DraftYear, College, TeamID)
 SELECT 
@@ -478,7 +481,39 @@ DO UPDATE SET OffStatID = EXCLUDED.OffStatID;
 -- 5. Final Cleanup
 DROP TABLE IF EXISTS temp_stats_staging;
 DROP TABLE IF EXISTS temp_off_stats_staging;-- 1. Create a "Resolved" table that maps CSV data directly to IDs
-DROP TABLE IF EXISTS temp_def_resolved;
+
+DROP TABLE IF EXISTS temp_def_stats_staging;
+
+CREATE TABLE temp_def_stats_staging (
+    season INTEGER, week INTEGER, season_type TEXT, player_id TEXT, 
+    player_name TEXT, player_display_name TEXT, position TEXT, 
+    position_group TEXT, headshot_url TEXT, team TEXT, 
+    def_tackles DECIMAL, def_tackles_solo DECIMAL, def_tackles_with_assist DECIMAL, 
+    def_tackle_assists DECIMAL, def_tackles_for_loss DECIMAL, 
+    def_tackles_for_loss_yards DECIMAL, def_fumbles_forced DECIMAL, 
+    def_sacks DECIMAL, def_sack_yards DECIMAL, def_qb_hits DECIMAL, 
+    def_interceptions DECIMAL, def_interception_yards DECIMAL, 
+    def_pass_defended DECIMAL, def_tds DECIMAL, def_fumbles DECIMAL, 
+    def_fumble_recovery_own DECIMAL, def_fumble_recovery_yards_own DECIMAL, 
+    def_fumble_recovery_opp DECIMAL, def_fumble_recovery_yards_opp DECIMAL, 
+    def_safety DECIMAL, def_penalty DECIMAL, def_penalty_yards DECIMAL
+);
+
+-- Add the internal barcode
+ALTER TABLE temp_def_stats_staging ADD COLUMN row_id SERIAL;
+
+COPY temp_def_stats_staging (
+    season, week, season_type, player_id, player_name, player_display_name, 
+    position, position_group, headshot_url, team, def_tackles, def_tackles_solo, 
+    def_tackles_with_assist, def_tackle_assists, def_tackles_for_loss, 
+    def_tackles_for_loss_yards, def_fumbles_forced, def_sacks, def_sack_yards, 
+    def_qb_hits, def_interceptions, def_interception_yards, def_pass_defended, 
+    def_tds, def_fumbles, def_fumble_recovery_own, def_fumble_recovery_yards_own, 
+    def_fumble_recovery_opp, def_fumble_recovery_yards_opp, def_safety, 
+    def_penalty, def_penalty_yards
+)
+FROM 'C:/Users/Public/Documents/player_stats_def_2021.csv' 
+WITH (FORMAT CSV, HEADER TRUE, QUOTE '"', DELIMITER ',');
 
 CREATE TEMP TABLE temp_def_resolved AS
 SELECT 
@@ -536,8 +571,12 @@ DO UPDATE SET DefStatID = EXCLUDED.DefStatID;
 
 -- 5. Final Cleanup
 DROP TABLE IF EXISTS temp_def_resolved;
+DROP TABLE IF EXISTS temp_def_stats_staging;
+
 -- Note: temp_def_stats_staging should also be dropped if you are finished with it
-DROP TABLE IF EXISTS temp_def_stats_staging;CREATE TABLE SnapCounts_Staging (
+DROP TABLE IF EXISTS temp_def_stats_staging;
+
+CREATE TABLE IF NOT EXISTS SnapCounts_Staging (
     game_id TEXT,
     pfr_game_id TEXT,
     season INTEGER,
@@ -557,27 +596,27 @@ DROP TABLE IF EXISTS temp_def_stats_staging;CREATE TABLE SnapCounts_Staging (
 );
 
 COPY SnapCounts_Staging
-FROM 'C:/Temp/snap_counts/snap_counts_2020.csv'
+FROM 'C:/Users/Public/Documents/snap_counts_2020.csv'
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 COPY SnapCounts_Staging
-FROM 'C:/Temp/snap_counts/snap_counts_2021.csv'
+FROM 'C:/Users/Public/Documents/snap_counts_2021.csv'
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 COPY SnapCounts_Staging
-FROM 'C:/Temp/snap_counts/snap_counts_2022.csv'
+FROM 'C:/Users/Public/Documents/snap_counts_2022.csv'
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 COPY SnapCounts_Staging
-FROM 'C:/Temp/snap_counts/snap_counts_2023.csv'
+FROM 'C:/Users/Public/Documents/snap_counts_2023.csv'
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 COPY SnapCounts_Staging
-FROM 'C:/Temp/snap_counts/snap_counts_2024.csv'
+FROM 'C:/Users/Public/Documents/snap_counts_2024.csv'
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 COPY SnapCounts_Staging
-FROM 'C:/Temp/snap_counts/snap_counts_2025.csv'
+FROM 'C:/Users/Public/Documents/snap_counts_2025.csv'
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 INSERT INTO SnapCounts (
@@ -588,46 +627,61 @@ INSERT INTO SnapCounts (
     STSnaps,
     SnapPercentage
 )
-SELECT
-    p.PlayerID,
-    g.GameID,
-    COALESCE(s.offense_snaps, 0),
-    COALESCE(s.defense_snaps, 0),
-    COALESCE(s.st_snaps, 0),
-    ROUND(
-        GREATEST(
-            COALESCE(s.offense_pct, 0),
-            COALESCE(s.defense_pct, 0),
-            COALESCE(s.st_pct, 0)
-        ) * 100,
-        2
-    ) AS SnapPercentage
-FROM SnapCounts_Staging s
+SELECT 
+    sub.PlayerID,
+    sub.GameID,
+    MAX(sub.OffensiveSnaps),
+    MAX(sub.DefensiveSnaps),
+    MAX(sub.STSnaps),
+    MAX(sub.SnapPercentage)
+FROM (
+    SELECT
+        p.PlayerID,
+        g.GameID,
+        COALESCE(s.offense_snaps, 0) as OffensiveSnaps,
+        COALESCE(s.defense_snaps, 0) as DefensiveSnaps,
+        COALESCE(s.st_snaps, 0) as STSnaps,
+        ROUND(
+            GREATEST(
+                COALESCE(s.offense_pct, 0),
+                COALESCE(s.defense_pct, 0),
+                COALESCE(s.st_pct, 0)
+            ) * 100,
+            2
+        ) AS SnapPercentage
+    FROM SnapCounts_Staging s
+    JOIN Seasons se ON s.season = EXTRACT(YEAR FROM se.StartDate)
+    JOIN Teams t_team ON t_team.TeamAbbr = s.team
+    JOIN Teams t_opp ON t_opp.TeamAbbr = s.opponent
+    JOIN Games g ON g.SeasonID = se.SeasonID
+       AND g.Week = s.week
+       AND ((g.HomeTeamID = t_team.TeamID AND g.AwayTeamID = t_opp.TeamID)
+         OR (g.HomeTeamID = t_opp.TeamID AND g.AwayTeamID = t_team.TeamID))
+    JOIN Player p ON LOWER(REGEXP_REPLACE(TRIM(p.FirstName || ' ' || p.LastName), '[^a-z ]', '', 'g'))
+       = LOWER(REGEXP_REPLACE(TRIM(s.player), '[^a-z ]', '', 'g'))
+) sub
+-- This GROUP BY ensures only one row per Player/Game is sent to the INSERT
+GROUP BY sub.PlayerID, sub.GameID
+ON CONFLICT (PlayerID, GameID) 
+DO UPDATE SET 
+    OffensiveSnaps = EXCLUDED.OffensiveSnaps,
+    DefensiveSnaps = EXCLUDED.DefensiveSnaps,
+    STSnaps = EXCLUDED.STSnaps,
+    SnapPercentage = EXCLUDED.SnapPercentage;
 
--- Match season
-JOIN Seasons se
-    ON s.season = EXTRACT(YEAR FROM se.StartDate)
-
--- Match teams
-JOIN Teams t_team
-    ON t_team.TeamAbbr = s.team
-
-JOIN Teams t_opp
-    ON t_opp.TeamAbbr = s.opponent
-
--- Match game (NOW includes week → deterministic)
-JOIN Games g
-    ON g.SeasonID = se.SeasonID
-   AND g.Week = s.week
-   AND (
-        (g.HomeTeamID = t_team.TeamID AND g.AwayTeamID = t_opp.TeamID)
-     OR (g.HomeTeamID = t_opp.TeamID AND g.AwayTeamID = t_team.TeamID)
-   )
-
--- Match player (name-based fallback)
-JOIN Player p
-  ON LOWER(REGEXP_REPLACE(TRIM(p.FirstName || ' ' || p.LastName), '[^a-z ]', '', 'g'))
-   =
-     LOWER(REGEXP_REPLACE(TRIM(s.player), '[^a-z ]', '', 'g'))
 
 DROP TABLE IF EXISTS SnapCounts_Staging;
+
+--Count of all tables for verification
+SELECT
+    (SELECT COUNT(*) FROM Conference) AS Conferences,
+    (SELECT COUNT(*) FROM Division) AS Divisions,
+    (SELECT COUNT(*) FROM Teams) AS Teams,
+    (SELECT COUNT(*) FROM Player) AS Players,
+    (SELECT COUNT(*) FROM Seasons) AS Seasons,
+    (SELECT COUNT(*) FROM Games) AS Games,
+    (SELECT COUNT(*) FROM SnapCounts) AS SnapCounts,
+    (SELECT COUNT(*) FROM OffensiveStats) AS OffensiveStats,
+    (SELECT COUNT(*) FROM DefensiveStats) AS DefensiveStats,
+    (SELECT COUNT(*) FROM PlayerStats) AS PlayerStats_Bridge;
+

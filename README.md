@@ -29,7 +29,7 @@ The schema consists of **11 relations** organized around a core hierarchy from C
 This phase focuses on the technical execution of the database, involving over **3,000 records** and advanced SQL logic.
 
 ### Key Tasks
-- [ ] **Data Loading**: Bulk import of production datasets using `load.sql`.
+- [X] **Data Loading**: Bulk import of production datasets using `load.sql`.
 - [X] **Normalization**: Verification of all relations to meet **Boyce-Codd Normal Form (BCNF)**.
 - [X] **Advanced Queries**: Implementation of 10+ complex SQL queries (Joins, Subqueries, Stored Procedures).
 - [X] **Transactions**: Failure handling using Triggers.
