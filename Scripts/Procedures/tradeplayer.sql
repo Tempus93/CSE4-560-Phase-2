@@ -8,10 +8,10 @@ LANGUAGE plpgsql
 AS $$
 BEGIN
     UPDATE Player 
-    SET TeamID = (SELECT TeamID FROM Teams WHERE abbreviation = new_team_abbr)
+    SET TeamID = (SELECT TeamID FROM Teams WHERE teamabbr = new_team_abbr)
     WHERE FirstName = p_first 
       AND LastName = p_last 
-      AND TeamID = (SELECT TeamID FROM Teams WHERE abbreviation = old_team_abbr);
+      AND TeamID = (SELECT TeamID FROM Teams WHERE teamabbr = old_team_abbr);
     
     COMMIT;
 END;

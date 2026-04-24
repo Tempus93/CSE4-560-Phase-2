@@ -9,7 +9,7 @@ BEGIN
     DELETE FROM Player 
     WHERE FirstName = p_first 
       AND LastName = p_last 
-      AND TeamID = (SELECT TeamID FROM Teams WHERE abbreviation = team_abbr);
+      AND TeamID = (SELECT TeamID FROM Teams WHERE teamabbr = team_abbr);
       
     COMMIT;
 END;
