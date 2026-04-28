@@ -44,7 +44,7 @@ CREATE TABLE IF NOT EXISTS Seasons (
 );
 
 COPY Seasons(StartDate, EndDate, IsActive)
-FROM 'C:/Temp/season_dates_1980-2026.csv'
+FROM 'Data(CSVs)/season_dates_1980-2026.csv'
 WITH (FORMAT CSV, HEADER TRUE, DELIMITER ',');
 
 -- 6. Games (References Seasons and Teams)
