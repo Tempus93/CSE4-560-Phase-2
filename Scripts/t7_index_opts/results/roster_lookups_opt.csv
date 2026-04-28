@@ -1,0 +1,23 @@
+QUERY PLAN
+Sort  (cost=52.69..52.77 rows=32 width=32) (actual time=0.215..0.217 rows=106.00 loops=1)
+"  Sort Key: p.""position"", p.lastname"
+  Sort Method: quicksort  Memory: 30kB
+  Buffers: shared hit=33 read=2
+  ->  Nested Loop  (cost=5.11..51.89 rows=32 width=32) (actual time=0.086..0.122 rows=106.00 loops=1)
+        Buffers: shared hit=33 read=2
+        ->  Seq Scan on teams t  (cost=0.00..11.38 rows=1 width=4) (actual time=0.010..0.010 rows=1.00 loops=1)
+              Filter: ((teamname)::text = 'Buffalo Bills'::text)
+              Rows Removed by Filter: 35
+              Buffers: shared hit=1
+        ->  Bitmap Heap Scan on player p  (cost=5.11..39.45 rows=107 width=36) (actual time=0.075..0.102 rows=106.00 loops=1)
+              Recheck Cond: (teamid = t.teamid)
+              Heap Blocks: exact=32
+              Buffers: shared hit=32 read=2
+              ->  Bitmap Index Scan on idx_player_teamid  (cost=0.00..5.08 rows=107 width=0) (actual time=0.065..0.065 rows=106.00 loops=1)
+                    Index Cond: (teamid = t.teamid)
+                    Index Searches: 1
+                    Buffers: shared read=2
+Planning:
+  Buffers: shared hit=39
+Planning Time: 1.163 ms
+Execution Time: 0.240 ms

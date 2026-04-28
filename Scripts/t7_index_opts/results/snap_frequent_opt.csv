@@ -1,0 +1,42 @@
+QUERY PLAN
+Hash Join  (cost=1646.54..4408.55 rows=1355 width=21) (actual time=3.174..13.190 rows=7474.00 loops=1)
+  Hash Cond: (s.playerid = p.playerid)
+  Buffers: shared hit=1553 read=207
+  InitPlan 1
+    ->  Limit  (cost=0.00..0.36 rows=1 width=4) (actual time=0.008..0.009 rows=1.00 loops=1)
+          Buffers: shared hit=1
+          ->  Seq Scan on seasons  (cost=0.00..2.17 rows=6 width=4) (actual time=0.008..0.008 rows=1.00 loops=1)
+                Filter: (startdate >= '2024-01-01'::date)
+                Rows Removed by Filter: 44
+                Buffers: shared hit=1
+  ->  Hash Join  (cost=1533.42..4291.86 rows=1355 width=12) (actual time=2.756..12.032 rows=7474.00 loops=1)
+        Hash Cond: (s.gameid = g.gameid)
+        Buffers: shared hit=1520 read=207
+        ->  Bitmap Heap Scan on snapcounts s  (cost=1380.36..3946.38 rows=73282 width=12) (actual time=2.675..8.714 rows=73824.00 loops=1)
+              Recheck Cond: (snappercentage > 80.00)
+              Heap Blocks: exact=1513
+              Buffers: shared hit=1513 read=205
+              ->  Bitmap Index Scan on idx_snapcounts_percentage  (cost=0.00..1362.04 rows=73282 width=0) (actual time=2.572..2.572 rows=73824.00 loops=1)
+                    Index Cond: (snappercentage > 80.00)
+                    Index Searches: 1
+                    Buffers: shared read=205
+        ->  Hash  (cost=149.70..149.70 rows=269 width=8) (actual time=0.072..0.073 rows=285.00 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 20kB
+              Buffers: shared hit=7 read=2
+              ->  Bitmap Heap Scan on games g  (cost=6.37..149.70 rows=269 width=8) (actual time=0.038..0.058 rows=285.00 loops=1)
+                    Recheck Cond: (seasonid = (InitPlan 1).col1)
+                    Heap Blocks: exact=6
+                    Buffers: shared hit=7 read=2
+                    ->  Bitmap Index Scan on idx_games_seasonid  (cost=0.00..6.30 rows=269 width=0) (actual time=0.032..0.032 rows=285.00 loops=1)
+                          Index Cond: (seasonid = (InitPlan 1).col1)
+                          Index Searches: 1
+                          Buffers: shared hit=1 read=2
+  ->  Hash  (cost=68.45..68.45 rows=3545 width=17) (actual time=0.409..0.411 rows=3545.00 loops=1)
+        Buckets: 4096  Batches: 1  Memory Usage: 212kB
+        Buffers: shared hit=33
+        ->  Seq Scan on player p  (cost=0.00..68.45 rows=3545 width=17) (actual time=0.007..0.174 rows=3545.00 loops=1)
+              Buffers: shared hit=33
+Planning:
+  Buffers: shared hit=137 read=9
+Planning Time: 2.603 ms
+Execution Time: 13.441 ms
