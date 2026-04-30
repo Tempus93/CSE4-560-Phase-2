@@ -1,0 +1,466 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{hyperref}
+\usepackage{tabularx}
+\usepackage{multirow}
+
+% SQL listing style
+\lstdefinestyle{sqlstyle}{
+  language=SQL,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray},
+  stringstyle=\color{orange},
+  breaklines=true,
+  breakatwhitespace=true,
+  frame=single,
+  rulecolor=\color{black!30},
+  backgroundcolor=\color{black!3},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  numbersep=5pt,
+  xleftmargin=10pt,
+  tabsize=2,
+  showstringspaces=false,
+  captionpos=b,
+}
+
+\lstdefinestyle{planstyle}{
+  basicstyle=\ttfamily\scriptsize,
+  breaklines=true,
+  frame=single,
+  rulecolor=\color{black!30},
+  backgroundcolor=\color{black!5},
+  xleftmargin=5pt,
+  tabsize=2,
+  showstringspaces=false,
+  captionpos=b,
+}
+
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+
+\begin{document}
+
+%------------------------------------------------------------------
+% Title Block
+%------------------------------------------------------------------
+\title{GridironAnalytics: A Relational Approach to NFL Performance\\
+{\footnotesize \textnormal{CSE 460/560 -- Data Models and Query Languages, Phase 2 Report}}
+}
+
+\author{
+  \IEEEauthorblockN{Justin Downer}
+  \IEEEauthorblockA{\textit{University at Buffalo}\\
+  UBID: jrdowner}
+  \and
+  \IEEEauthorblockN{Colin Xiao}
+  \IEEEauthorblockA{\textit{University at Buffalo}\\
+  UBID: colinxia}
+  \and
+  \IEEEauthorblockN{Matt Jacovelli}
+  \IEEEauthorblockA{\textit{University at Buffalo}\\
+  UBID: mkjacove}
+}
+
+\maketitle
+
+%------------------------------------------------------------------
+% Abstract
+%------------------------------------------------------------------
+\begin{abstract}
+GridironAnalytics is a comprehensive relational database system built in PostgreSQL to manage and analyze large volumes of professional NFL football data. The system integrates over 200{,}000 records—encompassing player statistics, team performances, and more than 90{,}000 individual snap counts—providing a robust platform for real-time roster management, historical performance tracking, and analytical querying. This Phase 2 report details the advanced SQL programmability implemented for the system, including stored procedures, transaction handling with failure-triggered audit logging, and a rigorous indexing and query-execution analysis. Key optimizations achieved query latency reductions of up to 86\%, demonstrating the production-grade scalability of the schema.
+\end{abstract}
+
+\begin{IEEEkeywords}
+PostgreSQL, NFL analytics, relational database, BCNF, indexing, stored procedures, triggers, query optimization
+\end{IEEEkeywords}
+
+%------------------------------------------------------------------
+% 1. Introduction
+%------------------------------------------------------------------
+\section{Introduction}
+
+GridironAnalytics is a production-ready relational database system designed to handle the complexity and scale of professional football data. By integrating diverse data sources into a unified schema, the system enables analysts, broadcasters, and sports-betting professionals to perform multi-dimensional queries spanning player statistics, game results, snap counts, and team compositions.
+
+The primary objectives of Phase 2 are:
+\begin{itemize}
+  \item Implement and demonstrate advanced SQL programmability via stored procedures and functions (Task 5).
+  \item Design and test robust transaction handling with failure-triggered audit logging (Task 6).
+  \item Identify performance bottlenecks and resolve them through targeted B-Tree indexing strategies (Task 7).
+\end{itemize}
+
+The project dataset comprises over 220{,}000 snap count records and approximately 90{,}000 total rows distributed across the schema, sourced from the publicly available NFLverse dataset.
+
+%------------------------------------------------------------------
+% 2. Database Design and Normalization (Task 4 -- from Phase 1)
+%------------------------------------------------------------------
+\section{Database Design and Normalization (Task 4)}
+
+To ensure data integrity and eliminate redundancy, the GridironAnalytics schema was developed in adherence with \textbf{Boyce-Codd Normal Form (BCNF)}.
+
+\subsection{Functional Dependencies}
+
+The following primary functional dependencies were identified to establish a unique determinant for every non-trivial attribute:
+
+\begin{itemize}
+  \item \textbf{Player}: $\{\text{PlayerID}\} \rightarrow \{\text{FirstName, LastName, TeamAbbr}\}$
+  \item \textbf{Teams}: $\{\text{TeamID}\} \rightarrow \{\text{TeamAbbr, Name}\}$
+  \item \textbf{Games}: $\{\text{GameID}\} \rightarrow \{\text{SeasonID, Week, HomeTeamID, AwayTeamID,}$\\$\text{HomeScore, AwayScore}\}$
+\end{itemize}
+
+\subsection{Normalization Justification}
+
+By ensuring that the determinant in every functional dependency is a superkey, the schema eliminates update and insertion anomalies. This was particularly critical given the prevalence of duplicate player names across the NFL; using \texttt{PlayerID} as the sole determinant ensures that statistics are always mapped to unique entities, even when name collisions occur.
+
+%------------------------------------------------------------------
+% 3. Data Implementation and Migration (Task 3)
+%------------------------------------------------------------------
+\section{Data Implementation and Migration (Task 3)}
+
+The project utilizes a production dataset exceeding 90{,}000 records. Rather than using standard CSV-to-table bulk imports, the team implemented a \textbf{staging-to-production pipeline} using temporary tables.
+
+This approach offered several advantages. First, it enabled complex data-cleaning operations using familiar SQL constructs, specifically resolving name-based CSV identifiers into internal foreign key IDs. Second, it facilitated an \textit{order-independent} loading process, allowing offensive and defensive statistics to be populated without disrupting existing bridge-table records. This design pattern significantly reduced referential integrity violations during the initial data load.
+
+%------------------------------------------------------------------
+% 4. Advanced SQL Programmability (Task 5 & 6)
+%------------------------------------------------------------------
+\section{Advanced SQL Programmability (Tasks 5 \& 6)}
+
+\subsection{Team and Player Data Querying}
+
+The GridironAnalytics schema supports flexible, multi-level queries across rosters, statistics, and game results. Representative query use cases include:
+\newpage
+\begin{itemize}
+  \item \textbf{Team Ranking Query}: Selects the top 5 teams over the past three seasons based on total wins and average points per game. This is frequently used by sports bettors and analysts to identify Super Bowl prospects.
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.38\textwidth]{top5team3seasons.png}
+    \caption{Description of the image results.}
+    \label{fig:unique_name}
+\end{figure}
+  \item \textbf{Defensive Player Ranking}: Selects the top 10 defensive players by total sacks and tackles, enabling fans and analysts to settle performance debates.
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.38\textwidth]{playertackle.png}
+    \caption{Description of the image results.}
+    \label{fig:unique_name}
+\end{figure}
+  \item \textbf{Individual Game Performance}: Retrieves per-game player statistics (tackles, passing yards), a common data point for sports broadcasters.
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.38\textwidth]{t53.png}
+    \caption{Description of the image results.}
+    \label{fig:unique_name}
+\end{figure}
+\end{itemize}
+
+\subsection{Stored Procedures and Functions}
+
+To simplify roster management over a large dataset, the team developed several stored procedures for high-frequency league occurrences. These procedures ensure that roster changes are processed as \textbf{atomic units of work}, maintaining cross-table consistency.
+
+\begin{itemize}
+  \item \texttt{UpdatePlayerTeamByName(playerName, newTeam)}: Atomically transfers a player's team affiliation, updating all linked tables in a single transaction.
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.5\textwidth]{t61.png}
+    \caption{Description of the image results.}
+    \label{fig:unique_name}
+\end{figure}
+
+  \item \texttt{RetirePlayerByName(playerName, teamName)}: Marks a specified player as retired and removes their active roster entry. For example, invoking this procedure on Steelers wide receiver Adam Thielen correctly removes him from the active Pittsburgh Steelers roster.
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.5\textwidth]{t62.png}
+    \caption{Description of the image results.}
+    \label{fig:unique_name}
+\end{figure}
+
+  \item \texttt{GetPlayerLatestStats(playerName)}: Returns the most recent statistical record for a given player, demonstrated with KC Chiefs quarterback Patrick Mahomes.
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.5\textwidth]{t63.png}
+    \caption{Description of the image results.}
+    \label{fig:unique_name}
+\end{figure}
+
+\end{itemize}
+
+\subsection{Transaction Failure Handling and Triggers (Task 6)}
+
+For Task 6, the team implemented an automated \textbf{Audit Trail} using a PostgreSQL trigger.
+
+\begin{itemize}
+  \item \textbf{Trigger Logic}: When a trade transaction fails due to a foreign key violation (e.g., referencing a non-existent player or team), the \texttt{AFTER} trigger automatically logs the failed attempt—including the attempted values and a timestamp—into a \texttt{Trade\_Failure\_Log} table.
+  \item \textbf{Benefit}: This approach ensures that no failed transaction is silently dropped. Administrators can query the audit log to identify and remediate data issues without requiring manual inspection of transaction logs, significantly reducing system downtime during large-scale data updates.
+  \item \textbf{Justification}: When a transaction is aborted due to a constraint violation in PostgreSQL, all changes within that transaction block are rolled back atomically. The trigger fires \textit{before} the rollback completes, capturing the failure state and persisting it to the audit table in a separate transaction, thus preserving the failure record.
+\end{itemize}
+
+%------------------------------------------------------------------
+% 5. Performance Analysis (Task 7)
+%------------------------------------------------------------------
+\section{Performance Analysis and Indexing (Task 7)}
+
+\subsection{Optimization Objective}
+
+The primary objective of this performance analysis was to evaluate the scalability of the GridironAnalytics schema under high-volume analytical queries. With over 220{,}000 snap count records and approximately 90{,}000 total rows, standard join operations began exhibiting noticeable latency. Three representative queries were selected and optimized to meet sub-100\,ms response-time requirements suitable for a real-time sports analytics platform.
+
+\subsection{Query 1: Player Lookup by Team}
+
+\subsubsection{Query Definition}
+
+\begin{lstlisting}[style=sqlstyle, caption={Player lookup by team name}]
+SELECT p.FirstName, p.LastName,
+       p.Position, p.DraftYear, p.College
+FROM   Player p
+JOIN   Teams t ON p.TeamID = t.TeamID
+WHERE  t.TeamName = 'Buffalo Bills'
+ORDER  BY p.Position ASC, p.LastName ASC;
+\end{lstlisting}
+
+\subsubsection{Bottleneck Identification}
+
+This query represents a very common access pattern: users frequently filter players by team. The initial \texttt{EXPLAIN ANALYZE} output revealed a \textbf{Sequential Scan} on the \texttt{Player} table across all 3{,}545 rows.
+
+\begin{lstlisting}[style=planstyle, caption={Initial plan -- Query 1 (before index)}]
+Sort (cost=90.30..90.38) (actual time=0.430..0.433)
+  -> Hash Join (cost=11.39..89.50)
+       -> Seq Scan on player p (cost=0.00..68.45)
+            [3545 rows scanned]
+Planning Time: 1.417 ms
+Execution Time: 0.455 ms
+\end{lstlisting}
+
+\subsubsection{Indexing Strategy and Result}
+
+A B-Tree index on \texttt{Player(TeamID)} allows the planner to switch from a sequential scan to a Bitmap Heap Scan, reducing I/O significantly.
+
+\begin{lstlisting}[style=sqlstyle, caption={Index creation -- Query 1}]
+CREATE INDEX IF NOT EXISTS idx_player_teamid
+    ON Player (TeamID);
+\end{lstlisting}
+
+\begin{lstlisting}[style=planstyle, caption={Optimized plan -- Query 1 (after index)}]
+Sort (cost=52.69..52.77) (actual time=0.215..0.217)
+  -> Nested Loop
+       -> Seq Scan on teams t
+       -> Bitmap Heap Scan on player p
+            -> Bitmap Index Scan on idx_player_teamid
+Planning Time: 1.163 ms
+Execution Time: 0.240 ms
+\end{lstlisting}
+
+\textbf{Result}: Cost reduced from \texttt{90.30..90.38} to \texttt{52.69..52.77}; execution time improved by \textbf{47\%} (0.455\,ms $\rightarrow$ 0.240\,ms).
+
+\subsection{Query 2: High-Snap-Frequency Players}
+
+\subsubsection{Query Definition}
+
+
+\begin{lstlisting}[style=sqlstyle, caption={High snap-frequency player query}]
+SELECT p.FirstName, p.LastName,
+       g.Week, s.SnapPercentage
+FROM   Player p
+JOIN   SnapCounts s ON p.PlayerID = s.PlayerID
+JOIN   Games g     ON s.GameID   = g.GameID
+WHERE  s.SnapPercentage > 80.00
+  AND  g.SeasonID = (
+           SELECT SeasonID FROM Seasons
+           WHERE  StartDate >= '2024-01-01'
+           LIMIT  1);
+\end{lstlisting}
+
+\subsubsection{Bottleneck Identification}
+
+This query is a critical use case for identifying consistent, high-usage players for fantasy football and betting models. The initial execution plan used a \textbf{Parallel Sequential Scan} over all 220{,}000+ \texttt{SnapCounts} rows, resulting in significant I/O overhead.
+
+\begin{lstlisting}[style=planstyle, caption={Initial plan -- Query 2 (before index)}]
+Gather (cost=1437.39..4987.92) (actual time=1.805..31.192)
+  -> Hash Join
+       -> Parallel Seq Scan on snapcounts s
+            [111,183 rows filtered; 75,271 removed]
+Planning Time: 2.906 ms
+Execution Time: 31.437 ms
+\end{lstlisting}
+
+\subsubsection{Indexing Strategy and Result}
+
+B-Tree indexes were added on the composite foreign key (\texttt{PlayerID, GameID}) in \texttt{SnapCounts}, on the \texttt{SnapPercentage} filter column, and on \texttt{Games(SeasonID)}.
+
+\begin{lstlisting}[style=sqlstyle, caption={Index creation -- Query 2}]
+CREATE INDEX IF NOT EXISTS idx_snapcounts_player_game
+    ON SnapCounts(PlayerID, GameID);
+CREATE INDEX IF NOT EXISTS idx_snapcounts_percentage
+    ON SnapCounts(SnapPercentage);
+CREATE INDEX IF NOT EXISTS idx_games_seasonid
+    ON Games(SeasonID);
+\end{lstlisting}
+
+\begin{lstlisting}[style=planstyle, caption={Optimized plan -- Query 2 (after index)}]
+Hash Join (cost=1646.54..4408.55) (actual time=3.174..13.190)
+  -> Hash Join
+       -> Bitmap Heap Scan on snapcounts s
+            -> Bitmap Index Scan on idx_snapcounts_percentage
+       -> Bitmap Heap Scan on games g
+            -> Bitmap Index Scan on idx_games_seasonid
+Planning Time: 2.603 ms
+Execution Time: 13.441 ms
+\end{lstlisting}
+
+\textbf{Result}: Execution time reduced by \textbf{57\%} (31.437\,ms $\rightarrow$ 13.441\,ms); the planner eliminated the costly parallel sequential scan in favour of targeted bitmap index scans.
+
+\subsection{Query 3: Top-10 Receivers by Season}
+
+\subsubsection{Query Definition}
+
+\begin{lstlisting}[style=sqlstyle, caption={Top-10 WR query by season}]
+SELECT  p.LastName, p.FirstName,
+        o.receivingyds
+FROM   Player p
+JOIN   SnapCounts s  ON p.PlayerID = s.PlayerID
+JOIN   PlayerStats ps
+           ON  p.PlayerID = ps.PlayerID
+           AND s.GameID   = ps.GameID
+JOIN   OffensiveStats o ON ps.OffStatID = o.OffStatID
+JOIN   Games g          ON s.GameID    = g.GameID
+WHERE  p.Position = 'WR'
+  AND  g.SeasonID = 2025
+ORDER  BY o.receivingyds DESC,
+          o.receivingtds DESC
+LIMIT  10;
+\end{lstlisting}
+
+\subsubsection{Bottleneck Identification}
+
+This five-table join represents a common pattern for fantasy analytics. The initial plan used a sequential scan on \texttt{Games} (14{,}552 rows filtered) and, at scale, would degrade into deeply nested sequential loops.
+
+\begin{lstlisting}[style=planstyle, caption={Initial plan -- Query 3 (before index)}]
+Limit (cost=642.81..642.82) (actual time=0.651..0.653)
+  -> Nested Loop
+       -> Seq Scan on games g
+            [Filter: seasonid = 2025;
+             14,552 rows removed by filter]
+Planning Time: 13.575 ms
+Execution Time: 0.696 ms
+\end{lstlisting}
+
+Although the execution time is low with the current dataset, the sequential scan on \texttt{Games} will become a critical bottleneck as more seasons are added.
+
+\subsubsection{Indexing Strategy and Result}
+
+B-Tree indexes were added on all foreign keys participating in the join, as well as on \texttt{Player(Position)} and \texttt{Games(SeasonID)}.
+
+\begin{lstlisting}[style=sqlstyle, caption={Index creation -- Query 3}]
+CREATE INDEX idx_player_position
+    ON Player (Position);
+CREATE INDEX idx_games_seasonid
+    ON Games (SeasonID);
+CREATE INDEX idx_snapcounts_player_game
+    ON SnapCounts (PlayerID, GameID);
+CREATE INDEX idx_playerstats_player_game
+    ON PlayerStats (PlayerID, GameID);
+CREATE INDEX idx_playerstats_offstatid
+    ON PlayerStats (OffStatID);
+\end{lstlisting}
+
+\begin{lstlisting}[style=planstyle, caption={Optimized plan -- Query 3 (after index)}]
+Limit (cost=329.21..329.22) (actual time=0.039..0.040)
+  -> Nested Loop
+       -> Index Scan using idx_games_seasonid on games g
+            [seasonid = 2025; index seeks only]
+Planning Time: 4.343 ms
+Execution Time: 0.097 ms
+\end{lstlisting}
+
+\textbf{Result}: Cost reduced from \texttt{642.81..642.82} to \texttt{329.21..329.22}; execution time reduced by \textbf{86\%} (0.696\,ms $\rightarrow$ 0.097\,ms). B-Tree indexing converts nested sequential loops from $O(n)$ linear scans to $O(\log n)$ index seeks.
+
+\subsection{Summary of Performance Gains}
+
+Table~\ref{tab:perf} summarises the before-and-after performance metrics for all three optimized queries.
+
+\begin{table}[h]
+\centering
+\caption{Query Performance Summary}
+\label{tab:perf}
+\begin{tabular}{llrrl}
+\toprule
+\textbf{Query} & \textbf{Metric} & \textbf{Before} & \textbf{After} & \textbf{Gain} \\
+\midrule
+\multirow{2}{*}{Q1 (Team Roster)}
+  & Cost  & 90.30 & 52.69 & 42\% \\
+  & Time  & 0.455\,ms & 0.240\,ms & 47\% \\
+\midrule
+\multirow{2}{*}{Q2 (High Snaps)}
+  & Cost  & 4987.92 & 4408.55 & 12\% \\
+  & Time  & 31.437\,ms & 13.441\,ms & 57\% \\
+\midrule
+\multirow{2}{*}{Q3 (Top WR)}
+  & Cost  & 642.82 & 329.22 & 49\% \\
+  & Time  & 0.696\,ms & 0.097\,ms & 86\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+By transitioning search complexity from $O(n)$ sequential scans to $O(\log n)$ B-Tree index seeks, the system successfully demonstrated the ability to sustain professional-grade data volumes with sub-100\,ms analytical query response times.
+
+%------------------------------------------------------------------
+% 6. Team Contributions
+%------------------------------------------------------------------
+\section{Team Contributions}
+
+Table~\ref{tab:contrib} documents the primary contributions of each team member. Equal contribution was maintained throughout the project.
+
+\begin{table}[h]
+\centering
+\caption{Team Member Contributions}
+\label{tab:contrib}
+\begin{tabularx}{\columnwidth}{lX}
+\toprule
+\textbf{Member} & \textbf{Primary Contributions} \\
+\midrule
+Justin Downer & Lead logic for migration scripts, BCNF normalization architecture, and core SQL stored procedures. \\
+\midrule
+Colin Xiao & Data sourcing, E/R diagram development, trigger logic design, and performance analysis. \\
+\midrule
+Matt Jacovelli & Assisted migration scripts (snaps, games, seasons), finalized load scripts, and developed complex SQL queries. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+%------------------------------------------------------------------
+% 7. Conclusion
+%------------------------------------------------------------------
+\section{Conclusion}
+
+GridironAnalytics demonstrates that a carefully normalized PostgreSQL schema, augmented with targeted B-Tree indexing and procedural encapsulation, can meet the performance and reliability demands of a production-grade sports analytics platform. The Phase 2 deliverables—stored procedures for atomic roster management, a trigger-based audit trail for failed transactions, and a systematic indexing strategy—collectively validate the system's suitability for real-world analytical workloads. Future work includes extending the dataset to cover additional NFL seasons and integrating a front-end dashboard for interactive visualization.
+
+%------------------------------------------------------------------
+% References
+%------------------------------------------------------------------
+\begin{thebibliography}{00}
+
+\bibitem{nflverse}
+nflverse contributors, ``nflverse: A collection of packages for NFL data,'' GitHub repository, 2024. [Online]. Available: \url{https://github.com/nflverse/nflverse}
+
+\bibitem{postgresql}
+The PostgreSQL Global Development Group, ``PostgreSQL 16 Documentation,'' 2024. [Online]. Available: \url{https://www.postgresql.org/docs/16/}
+
+\bibitem{ieee_template}
+IEEE, ``IEEE Conference Templates,'' 2024. [Online]. Available: \url{https://www.ieee.org/conferences/publishing/templates.html}
+
+\bibitem{ramakrishnan}
+R. Ramakrishnan and J. Gehrke, \textit{Database Management Systems}, 3rd ed. New York: McGraw-Hill, 2003.
+
+\end{thebibliography}
+
+\end{document}
