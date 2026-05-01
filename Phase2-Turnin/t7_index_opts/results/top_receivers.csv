@@ -1,0 +1,40 @@
+QUERY PLAN
+Limit  (cost=642.81..642.82 rows=1 width=21) (actual time=0.651..0.653 rows=0.00 loops=1)
+  Buffers: shared hit=144
+  ->  Sort  (cost=642.81..642.82 rows=1 width=21) (actual time=0.650..0.652 rows=0.00 loops=1)
+"        Sort Key: o.receivingyds DESC, o.receivingtds DESC"
+        Sort Method: quicksort  Memory: 25kB
+        Buffers: shared hit=144
+        ->  Nested Loop  (cost=321.89..642.80 rows=1 width=21) (actual time=0.629..0.631 rows=0.00 loops=1)
+              Buffers: shared hit=141
+              ->  Nested Loop  (cost=321.61..642.48 rows=1 width=17) (actual time=0.629..0.631 rows=0.00 loops=1)
+                    Buffers: shared hit=141
+                    ->  Nested Loop  (cost=321.33..642.18 rows=1 width=12) (actual time=0.629..0.631 rows=0.00 loops=1)
+                          Buffers: shared hit=141
+                          ->  Hash Join  (cost=320.91..641.60 rows=1 width=16) (actual time=0.629..0.630 rows=0.00 loops=1)
+                                Hash Cond: (ps.gameid = g.gameid)
+                                Buffers: shared hit=141
+                                ->  Seq Scan on playerstats ps  (cost=0.00..274.38 rows=17638 width=12) (actual time=0.013..0.013 rows=1.00 loops=1)
+                                      Buffers: shared hit=2
+                                ->  Hash  (cost=320.90..320.90 rows=1 width=4) (actual time=0.611..0.611 rows=0.00 loops=1)
+                                      Buckets: 1024  Batches: 1  Memory Usage: 8kB
+                                      Buffers: shared hit=139
+                                      ->  Seq Scan on games g  (cost=0.00..320.90 rows=1 width=4) (actual time=0.610..0.610 rows=0.00 loops=1)
+                                            Filter: (seasonid = 2025)
+                                            Rows Removed by Filter: 14552
+                                            Buffers: shared hit=139
+                          ->  Index Only Scan using snapcounts_playerid_gameid_key on snapcounts s  (cost=0.42..0.58 rows=1 width=8) (never executed)
+                                Index Cond: ((playerid = ps.playerid) AND (gameid = ps.gameid))
+                                Heap Fetches: 0
+                                Index Searches: 0
+                    ->  Index Scan using player_pkey on player p  (cost=0.28..0.30 rows=1 width=17) (never executed)
+                          Index Cond: (playerid = s.playerid)
+"                          Filter: ((""position"")::text = 'WR'::text)"
+                          Index Searches: 0
+              ->  Index Scan using offensivestats_pkey on offensivestats o  (cost=0.28..0.32 rows=1 width=12) (never executed)
+                    Index Cond: (offstatid = ps.offstatid)
+                    Index Searches: 0
+Planning:
+  Buffers: shared hit=320 dirtied=1
+Planning Time: 13.575 ms
+Execution Time: 0.696 ms

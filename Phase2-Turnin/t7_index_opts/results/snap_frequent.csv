@@ -1,0 +1,38 @@
+QUERY PLAN
+Gather  (cost=1437.39..4987.92 rows=1355 width=21) (actual time=1.805..31.192 rows=7474.00 loops=1)
+  Workers Planned: 1
+  Workers Launched: 1
+  Buffers: shared hit=1856
+  InitPlan 1
+    ->  Limit  (cost=0.00..0.36 rows=1 width=4) (actual time=0.016..0.017 rows=1.00 loops=1)
+          Buffers: shared hit=1
+          ->  Seq Scan on seasons  (cost=0.00..2.17 rows=6 width=4) (actual time=0.013..0.013 rows=1.00 loops=1)
+                Filter: (startdate >= '2024-01-01'::date)
+                Rows Removed by Filter: 44
+                Buffers: shared hit=1
+  ->  Hash Join  (cost=437.02..3852.06 rows=797 width=21) (actual time=1.085..11.896 rows=3737.00 loops=2)
+        Hash Cond: (s.playerid = p.playerid)
+        Buffers: shared hit=1855
+        ->  Hash Join  (cost=324.26..3737.20 rows=797 width=12) (actual time=0.347..10.685 rows=3737.00 loops=2)
+              Hash Cond: (s.gameid = g.gameid)
+              Buffers: shared hit=1789
+              ->  Parallel Seq Scan on snapcounts s  (cost=0.00..3299.75 rows=43107 width=12) (actual time=0.008..8.686 rows=36912.00 loops=2)
+                    Filter: (snappercentage > 80.00)
+                    Rows Removed by Filter: 75271
+                    Buffers: shared hit=1650
+              ->  Hash  (cost=320.90..320.90 rows=269 width=8) (actual time=0.670..0.670 rows=285.00 loops=1)
+                    Buckets: 1024  Batches: 1  Memory Usage: 20kB
+                    Buffers: shared hit=139
+                    ->  Seq Scan on games g  (cost=0.00..320.90 rows=269 width=8) (actual time=0.591..0.644 rows=285.00 loops=1)
+                          Filter: (seasonid = (InitPlan 1).col1)
+                          Rows Removed by Filter: 14267
+                          Buffers: shared hit=139
+        ->  Hash  (cost=68.45..68.45 rows=3545 width=17) (actual time=0.727..0.728 rows=3545.00 loops=2)
+              Buckets: 4096  Batches: 1  Memory Usage: 212kB
+              Buffers: shared hit=66
+              ->  Seq Scan on player p  (cost=0.00..68.45 rows=3545 width=17) (actual time=0.109..0.321 rows=3545.00 loops=2)
+                    Buffers: shared hit=66
+Planning:
+  Buffers: shared hit=133
+Planning Time: 2.906 ms
+Execution Time: 31.437 ms

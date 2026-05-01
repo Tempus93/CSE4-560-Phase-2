@@ -1,0 +1,21 @@
+QUERY PLAN
+Sort  (cost=90.30..90.38 rows=32 width=32) (actual time=0.430..0.433 rows=106.00 loops=1)
+"  Sort Key: p.""position"", p.lastname"
+  Sort Method: quicksort  Memory: 30kB
+  Buffers: shared hit=37
+  ->  Hash Join  (cost=11.39..89.50 rows=32 width=32) (actual time=0.030..0.333 rows=106.00 loops=1)
+        Hash Cond: (p.teamid = t.teamid)
+        Buffers: shared hit=34
+        ->  Seq Scan on player p  (cost=0.00..68.45 rows=3545 width=36) (actual time=0.009..0.144 rows=3545.00 loops=1)
+              Buffers: shared hit=33
+        ->  Hash  (cost=11.38..11.38 rows=1 width=4) (actual time=0.013..0.013 rows=1.00 loops=1)
+              Buckets: 1024  Batches: 1  Memory Usage: 9kB
+              Buffers: shared hit=1
+              ->  Seq Scan on teams t  (cost=0.00..11.38 rows=1 width=4) (actual time=0.007..0.008 rows=1.00 loops=1)
+                    Filter: ((teamname)::text = 'Buffalo Bills'::text)
+                    Rows Removed by Filter: 35
+                    Buffers: shared hit=1
+Planning:
+  Buffers: shared hit=225
+Planning Time: 1.417 ms
+Execution Time: 0.455 ms
